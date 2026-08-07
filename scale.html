@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Major Scale Trainer</title>
+    <style>
+        /* Centering and Responsive Full Window Grid */
+        html, body {
+            height: 100%; margin: 0; display: flex; justify-content: center; align-items: center;
+            background: #1a1a1a; color: #fff; overflow: hidden; font-family: sans-serif;
+        }
+
+        /* ADJUST APP ZOOM HERE: Change font-size to scale all elements and text together */
+        #container {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: space-between; /* Spaces items out vertically to fill the height */
+            width: 95vw; max-width: 1200px;
+            height: 85vh; /* Expanded height to distribute layout perfectly in the window */
+            font-size: 1.5vmin;
+        }
+
+        /* Compact Exercise Mode Layout */
+        .mode-container {
+            margin-bottom: 1em; display: flex; justify-content: center; gap: 1.5em;
+        }
+        .mode-btn {
+            background: #333; color: #aaa; border: 0.2em solid #555; padding: 0.6em 1.5em;
+            font-size: 1.2em; font-weight: bold; border-radius: 0.5em; cursor: pointer; transition: all 0.2s;
+        }
+        .mode-btn.active-mode {
+            background: #f39c12; color: #fff; border-color: #f39c12;
+            box-shadow: 0 0 1em rgba(243, 156, 18, 0.4);
+        }
+
+        /* Flex panel structure - dynamically stretches vertically */
+        #panel {
+            background: #2a2a2a; padding: 2em; border-radius: 1em;
+            text-align: center; border: 0.2em solid #444; width: 100%;
+            flex: 1; /* Allows the control card panel to fill available vertical window spaces */
+            max-height: 40vh;
+            box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;
+        }
+
+        #panel-left-debug {
+            width: 30%; background: #111; border: 0.2em solid #00ff00; height: 100%;
+            border-radius: 0.8em; padding: 1em; display: none; text-align: left;
+            box-sizing: border-box; overflow: auto;
+        }
+        #panel-left-debug pre {
+            font-family: monospace; font-size: 0.9em; color: #00ff00; margin: 0;
+            white-space: pre-wrap; user-select: text !important;
+        }
+
+        #panel-center-content {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%;
+        }
+
+        /* Language Selector */
+        #lang-selector {
+            position: absolute; top: 2vmin; right: 2vmin; background: #333; color: #fff;
+            border: 1px solid #555; padding: 0.5vmin 1vmin; border-radius: 0.5vmin;
+            font-size: 1.5vmin; cursor: pointer; z-index: 1000;
+        }
+
+        /* Keyboard Layout scaled to match parent text rules and fill the bottom area */
+        .piano-container {
+            display: flex; height: 35vh; min-height: 18em; background: #000; padding: 0.3em;
+            border-radius: 0.8em; margin-top: 2em; border: 0.2em solid #555;
+            position: relative; width: 100%; box-sizing: border-box; overflow: hidden;
+        }
+        .key { cursor: pointer; box-sizing: border-box; }
+        .white { flex: 1; height: 100%; background: #eee; z-index: 1; border-radius: 0 0 0.6em 0.6em; border: 0.1em solid #bbb; }
+        .black { position: absolute; width: 3.2%; height: 65%; background: #333; z-index: 10; border-radius: 0 0 0.5em 0.5em; border: 0.1em solid #000; transform: translateX(-50%); }
+
+        /* Key States */
+        .key.selected { background: #f39c12 !important; }
+        .key.correct { background: #27ae60 !important; }
+        .key.wrong { background: #e74c3c !important; }
+
+        /* Text scales matching container size */
+        #question { font-size: 3.5em; color: #3498db; font-weight: bold; margin-bottom: 0.3em; cursor: pointer; }
+        #status { font-size: 1.4em; color: #f1c40f; min-height: 1.8em; margin-bottom: 1.5em; }
+        button { padding: 1em 2em; font-size: 1.2em; cursor: pointer; border: none; border-radius: 0.4em; background: #3498db; color: #fff; font-weight: bold; margin: 0.4em; }
+    </style>
+</head>
+<body>
+
+    <select id="lang-selector" onchange="changeLanguage(this.value)">
+        <option value="English">English</option>
+        <option value="French">Français</option>
+        <option value="German">Deutsch</option>
+        <option value="Italian">Italiano</option>
+        <option value="Spanish">Español</option>
+    </select>
+
+    <div id="container">
+        <div class="mode-container">
+            <button id="btn-mode-scales" class="mode-btn active-mode" onclick="setExerciseMode('scales')">Mode: Scales</button>
+            <button id="btn-mode-alt" class="mode-btn" onclick="setExerciseMode('alterations')">Mode: Alterations</button>
+        </div>
+
+        <div id="panel">
+            <div id="panel-left-debug">
+                <pre id="debug-window">DEBUG WINDOW</pre>
+            </div>
+
+            <div id="panel-center-content">
+                <div id="question" title="Double click to reveal answer">--</div>
+                <div id="status">Select 8 notes.</div>
+
+                <div style="margin-top:1em;">
+                    <!-- Validate Button Removed From Layout Structure -->
+                    <button id="btn-clear" onclick="clearSelection()" style="background:#666">Clear</button>
+                    <button id="btn-new" onclick="generateChallenge()" style="background:#444">New Challenge</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="keyboard" class="piano-container"></div>
+    </div>
+<script>
+    const i18n = {
+        English: { clear: "Clear", new: "New Challenge", correct: "Correct! Next in 2s...", incorrect: "Incorrect notes.", start: "Starts on", from: "from", select: "Select 8 notes.", selectAlt: "Select altered notes only.", scaleMode: "Mode: Scales", altMode: "Mode: Alterations", altTitle: "Major Alterations" },
+        French: { clear: "Effacer", new: "Nouveau Défi", correct: "Correct ! Suite dans 2s...", incorrect: "Notes incorrectes.", start: "Commence par", from: "de", select: "Sélectionnez 8 notes.", selectAlt: "Sélectionnez uniquement les notes altérées.", scaleMode: "Mode : Gammes", altMode: "Mode : Altérations", altTitle: "Altérations Majeures" },
+        German: { clear: "Löschen", new: "Neue Aufgabe", correct: "Richtig! Weiter in 2 Sek...", incorrect: "Falsche Noten.", start: "Beginnt auf", from: "von", select: "Wähle 8 Noten.", selectAlt: "Wähle nur veränderte Noten.", scaleMode: "Modus: Tonleitern", altMode: "Modus: Vorzeichen", altTitle: "Dur-Vorzeichen" },
+        Italian: { clear: "Cancella", new: "Nuova Sfida", correct: "Corretto! Prossimo in 2s...", incorrect: "Note errate.", start: "Inizia su", from: "da", select: "Seleziona 8 note.", selectAlt: "Seleziona solo le note alterate.", scaleMode: "Modo: Scale", altMode: "Modo: Alterazioni", altTitle: "Alterazioni Maggiori" },
+        Spanish: { clear: "Borrar", new: "Nuevo Desafío", correct: "¡Correcto! Siguiente en 2s...", incorrect: "Notas incorrectas.", start: "Empieza en", from: "de", select: "Selecciona 8 notas.", selectAlt: "Selecciona solo notas alteradas.", scaleMode: "Modo: Escalas", altMode: "Modo: Alteraciones", altTitle: "Alteraciones Mayores" }
+    };
+
+    let currentLang = "English", currentExerciseMode = "scales", appIsReady = false;
+    let targetNotesMod = [], userSelection = [], isLocked = false, debugOn = false, currentScale = null;
+    let challengeHistory = [];
+
+    const notesStr = "C,C#,D,D#,E,F,F#,G,G#,A,A#,B".split(",");
+    const flatsStr = "C,Db,D,Eb,E,F,Gb,G,Ab,A,Bb,B".split(",");
+
+    const majorPattern = "0,2,4,5,7,9,11".split(",").map(Number);
+    const ordinals = "1st,2nd,3rd,4th,5th,6th,7th".split(",");
+
+    const scaleSpellings = {
+        'C':  ["C","D","E","F","G","A","B"], 'Db': ["Db","Eb","F","Gb","Ab","Bb","C"],
+        'D':  ["D","E","F#","G","A","B","C#"], 'Eb': ["Eb","F","G","Ab","Bb","C","D"],
+        'E':  ["E","F#","G#","A","B","C#","D#"], 'F':  ["F","G","A","Bb","C","D","E"],
+        'Gb': ["Gb","Ab","Bb","Cb","Db","Eb","F"], 'G':  ["G","A","B","C","D","E","F#"],
+        'Ab': ["Ab","Bb","C","Db","Eb","F","G"], 'A':  ["A","B","C#","D","E","F#","G#"],
+        'Bb': ["Bb","C","D","Eb","F","G","A"], 'B':  ["B","C#","D#","E","F#","G#","A#"]
+    };
+
+    const alterationsStringTable = {
+        "C": "", "Db": "1-3-6-8-10", "D": "1-6", "Eb": "3-8-10", "E": "1-3-6-8", "F": "10",
+        "Gb": "1-3-6-8-10-11", "G": "6", "Ab": "1-3-8-10", "A": "1-6-8", "Bb": "3-10", "B": "1-3-6-8-10"
+    };
+
+    const scales = JSON.parse('[{"name":"C","root":0},{"name":"Db","root":1},{"name":"D","root":2},{"name":"Eb","root":3},{"name":"E","root":4},{"name":"F","root":5},{"name":"Gb","root":6},{"name":"G","root":7},{"name":"Ab","root":8},{"name":"A","root":9},{"name":"Bb","root":10},{"name":"B","root":11}]');
+
+    function saveLanguage(l) { localStorage.setItem("user_lang", l); }
+    function loadLanguage() { return localStorage.getItem("user_lang"); }
+
+    function changeLanguage(lang) {
+        currentLang = lang; saveLanguage(lang);
+        "clear,new,mode-scales,mode-alt".split(",").forEach(id => {
+            const el = document.getElementById('btn-' + id);
+            if (el) el.innerText = i18n[lang][id.replace('mode-','').replace('alt','altMode').replace('scales','scaleMode')];
+        });
+        if (appIsReady) renderCurrentChallengeStrings();
+    }
+
+    style="background:#666"
+    function setExerciseMode(m) {
+        currentExerciseMode = m;
+        document.getElementById('btn-mode-scales').className = 'mode-btn' + (m === 'scales' ? ' active-mode' : '');
+        document.getElementById('btn-mode-alt').className = 'mode-btn' + (m === 'alterations' ? ' active-mode' : '');
+        generateChallenge();
+    }
+</script>
+
+<script>
+    function buildKeyboard() {
+        const kb = document.getElementById('keyboard'); if (!kb) return; kb.innerHTML = '';
+        let wc = 0;
+        for (let i = 0; i < 29; i++) {
+            if (!notesStr[i % 12].includes('#')) {
+                const k = document.createElement('div'); k.className = 'key white'; k.dataset.index = i;
+                k.onclick = () => handleKeyClick(i, k); kb.appendChild(k);
+            }
+        }
+        for (let i = 0; i < 29; i++) {
+            if (notesStr[i % 12].includes('#')) {
+                const k = document.createElement('div'); k.className = 'key black'; k.dataset.index = i;
+                k.style.left = `${(wc / 17) * 100}%`; k.onclick = () => handleKeyClick(i, k); kb.appendChild(k);
+            } else { wc++; }
+        }
+        appIsReady = true;
+        const sl = loadLanguage();
+        if (sl && i18n[sl]) { currentLang = sl; document.getElementById('lang-selector').value = sl; changeLanguage(sl); }
+
+        const savedChallenge = localStorage.getItem("trainer_active_challenge");
+        if (savedChallenge) {
+            const parsed = JSON.parse(savedChallenge);
+            currentExerciseMode = parsed.mode;
+            currentScale = scales.find(s => s.name === parsed.scaleName);
+            document.getElementById('btn-mode-scales').className = 'mode-btn' + (currentExerciseMode === 'scales' ? ' active-mode' : '');
+            document.getElementById('btn-mode-alt').className = 'mode-btn' + (currentExerciseMode === 'alterations' ? ' active-mode' : '');
+
+            if (currentExerciseMode === "scales") {
+                generateChallenge(parsed.degreeIdx);
+            } else {
+                generateChallenge();
+            }
+        } else {
+            generateChallenge();
+        }
+    }
+
+    function handleKeyClick(i, el) {
+        if (isLocked) return;
+
+        // Remove wrong styling from previous click if user tries to correct it right away
+        el.classList.remove('wrong');
+
+        if (userSelection.includes(i)) {
+            userSelection = userSelection.filter(x => x !== i); el.classList.remove('selected');
+        } else {
+            if (currentExerciseMode === "scales" && userSelection.length >= 8) return;
+            userSelection.push(i); el.classList.add('selected');
+        }
+        updateDebug();
+
+        // AUTOMATIC INSTANT VALIDATION TARGETS
+        const targetUniqueCount = new Set(targetNotesMod.map(n => n % 12)).size;
+
+        if (currentExerciseMode === "scales") {
+            // Instantly check as soon as 8 notes are picked
+            if (userSelection.length === 8) { validateSequence(); }
+        } else {
+            // Instantly check alterations mode once input count matches the target answer size
+            if (userSelection.length === targetUniqueCount) { validateSequence(); }
+        }
+    }
+
+    function generateChallenge(forcedDegreeIdx = null) {
+        if (!appIsReady) return; isLocked = false; clearSelection();
+
+        let attempts = 0, selectedScale = currentScale, selectedDegreeIdx = forcedDegreeIdx;
+
+        if (forcedDegreeIdx === null) {
+            do {
+                selectedScale = scales[Math.floor(Math.random() * scales.length)];
+                selectedDegreeIdx = currentExerciseMode === "scales" ? Math.floor(Math.random() * 7) : 0;
+                attempts++;
+                var signatureKey = `${currentExerciseMode}_${selectedScale.name}_${selectedDegreeIdx}`;
+            } while (challengeHistory.includes(signatureKey) && attempts < 50);
+
+            currentScale = selectedScale;
+            challengeHistory.push(signatureKey);
+            if (challengeHistory.length > 4) challengeHistory.shift();
+        } else {
+            selectedDegreeIdx = forcedDegreeIdx;
+        }
+
+        if (currentExerciseMode === "scales") {
+            targetNotesMod = Array.from({length: 8}, (_, i) => (currentScale.root + majorPattern[(selectedDegreeIdx + i) % 7]) % 12);
+            localStorage.setItem("trainer_active_challenge", JSON.stringify({
+                mode: "scales", scaleName: currentScale.name, degreeIdx: selectedDegreeIdx
+            }));
+        } else {
+            const ds = alterationsStringTable[currentScale.name];
+            targetNotesMod = ds === "" ? [] : ds.split("-").map(Number);
+            localStorage.setItem("trainer_active_challenge", JSON.stringify({
+                mode: "alterations", scaleName: currentScale.name, degreeIdx: 0
+            }));
+        }
+        renderCurrentChallengeStrings(selectedDegreeIdx);
+    }
+
+    function renderCurrentChallengeStrings(degreeIdxParam = null) {
+        if (!currentScale) return;
+        const qEl = document.getElementById('question'), sEl = document.getElementById('status');
+
+        let currentIdx = degreeIdxParam;
+        if (currentIdx === null) {
+            const saved = localStorage.getItem("trainer_active_challenge");
+            currentIdx = saved ? JSON.parse(saved).degreeIdx : 0;
+        }
+
+        if (currentExerciseMode === "scales") {
+            if (qEl) qEl.innerHTML = `${currentScale.name} ${i18n[currentLang].from} ${ordinals[currentIdx]}`;
+            if (sEl) sEl.innerText = `${i18n[currentLang].select} (${i18n[currentLang].start} ${scaleSpellings[currentScale.name][currentIdx]})`;
+        } else {
+            if (qEl) qEl.innerHTML = `${currentScale.name} ${i18n[currentLang].altTitle}`;
+            if (sEl) sEl.innerText = i18n[currentLang].selectAlt;
+        }
+        updateDebug();
+    }
+
+    function validateSequence() {
+        const sEl = document.getElementById('status'), tSet = new Set(targetNotesMod.map(n => n % 12)), uSet = new Set(userSelection.map(i => i % 12));
+        let ok = true;
+        if (tSet.size !== uSet.size) ok = false;
+        else tSet.forEach(p => { if (!uSet.has(p)) ok = false; });
+
+        if (ok) {
+            isLocked = true; if (sEl) sEl.innerText = i18n[currentLang].correct;
+            userSelection.forEach(idx => { const el = document.querySelector(`[data-index="${idx}"]`); if(el) { el.classList.remove('selected'); el.classList.add('correct'); } });
+            currentScale = null; setTimeout(() => { generateChallenge(); }, 2000);
+        } else {
+            if (sEl) sEl.innerText = i18n[currentLang].incorrect;
+            userSelection.forEach(idx => { if (!tSet.has(idx % 12)) { const el = document.querySelector(`[data-index="${idx}"]`); if(el) el.classList.add('wrong'); } });
+        }
+    }
+
+    function clearSelection() { userSelection = []; document.querySelectorAll('.key').forEach(k => k.classList.remove('selected', 'correct', 'wrong')); updateDebug(); }
+    function toggleDebug() { debugOn = !debugOn; const db = document.getElementById('panel-left-debug'); if (db) db.style.display = debugOn ? 'block' : 'none'; updateDebug(); }
+
+    function updateDebug() {
+        if (!currentScale) return;
+        const sp = scaleSpellings[currentScale.name];
+        const mapNames = arr => arr.map(p => {
+            const noteName = notesStr[p % 12];
+            return sp.includes(noteName) ? noteName : (flatsStr[p % 12].includes('b') && sp.some(x=>flatsStr[p%12].includes(x)) ? flatsStr[p%12] : noteName);
+        }).join(', ');
+        const dbWin = document.getElementById('debug-window');
+
+        let exp = "";
+        if (currentExerciseMode === "scales") { exp = mapNames(targetNotesMod); }
+        else { const ds = alterationsStringTable[currentScale.name]; exp = ds === "" ? "None" : mapNames(ds.split("-").map(Number)); }
+
+        if (dbWin) dbWin.innerText = `EXPECTED:\n${exp}\n\nINPUT:\n${mapNames(userSelection)}`;
+    }
+
+    window.onload = function() {
+        buildKeyboard();
+        const qh = document.getElementById('question');
+        if (qh) {
+            qh.style.userSelect = 'none';
+            qh.addEventListener('dblclick', toggleDebug);
+        }
+    };
+</script>
+</body>
+</html>
+

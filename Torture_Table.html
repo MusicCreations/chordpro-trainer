@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Torture Table - v1.9.4</title>
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #2c3e50;
+            --highlight: #3498db;
+            --error: #e74c3c;
+            --success: #2ecc71;
+            --root-color: #f1c40f;
+            --target-view: #9b59b6;
+            --shuffle: #e67e22;
+            --reset: #c0392b;
+            --key-w: 46px;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #ecf0f1;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            padding: 15px;
+            box-sizing: border-box;
+            margin: auto;
+            transition: all 0.4s ease;
+        }
+        #header-tools, .btn-group, #instructions-footer {
+            transition: opacity 0.3s ease;
+        }
+        .zen-active #header-tools,
+        .zen-active .btn-group,
+        .zen-active #instructions-footer {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        #controls {
+            transition: opacity 0.3s ease;
+        }
+        .zen-active #controls:not(.challenge-mode) {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        .zen-active #controls.challenge-mode {
+            opacity: 1;
+            pointer-events: auto;
+            height: auto;
+            margin: 10px 0;
+        }
+
+        #header-tools {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            box-sizing: border-box;
+        }
+        .left-controls-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .right-controls-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .mode-btn {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 13px;
+            background: #fff;
+            font-weight: bold;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        .mode-btn.active {
+            background: var(--highlight) !important;
+            color: white !important;
+        }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: bold;
+            background: #ddd;
+            padding: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        .select-tool {
+            padding: 0 8px;
+            border-radius: 5px;
+            font-weight: bold;
+            background: #fff;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            height: 32px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+        .zen-btn {
+            background: #34495e;
+            color: white;
+            padding: 0 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+        }
+        #exit-zen-btn {
+            display: none;
+            position: fixed; top: 20px; right: 20px; background: var(--highlight); color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: none; }
+        .zen-active #exit-zen-btn { display: block; }
+        #piano-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background: #333; padding: 25px 0; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-bottom: 20px; }
+        #piano { display: flex; width: max-content; margin: 0 auto; padding: 0 20px; }
+        .key { cursor: pointer; border: 1px solid #bbb; position: relative; box-sizing: border-box; transition: background 0.1s; }
+        .white { width: var(--key-w); height: 160px; background: var(--white); border-radius: 0 0 5px 5px; z-index: 1; }
+        .black { width: calc(var(--key-w) * 0.6); height: 100px; background: var(--black); margin-left: calc(var(--key-w) * -0.3); margin-right: calc(var(--key-w) * -0.3); z-index: 2; border-radius: 0 0 4px 4px; }
+        .root-key { background-color: var(--root-color) !important; color: black !important; }
+        .target-view { background-color: var(--target-view) !important; color: white !important; }
+        .correct { background-color: var(--success) !important; }
+        .wrong { background-color: var(--error) !important; }
+        #question-box { background: white; padding: 15px; border-radius: 10px; width: 100%; box-sizing: border-box; text-align: center; border-top: 5px solid var(--highlight); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        #question { font-size: 1.3em; color: #2c3e50; font-weight: bold; min-height: 1.4em; }
+        #feedback { font-weight: bold; height: 1.2em; font-size: 1.1em; margin-top: 8px; }
+
+        /* UPDATED: Forces exactly 11 columns across 2 symmetric rows */
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            gap: 6px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .int-btn { padding: 12px 2px; border: none; border-radius: 5px; background: white; font-weight: bold; border-bottom: 3px solid #bdc3c7; cursor: pointer; text-align: center; font-size: 13px; }
+        .int-btn.selected { background: var(--highlight) !important; color: white !important; }
+        .challenge-mode .int-btn:not(.selected) { opacity: 0.1; pointer-events: none; }
+        .challenge-mode .int-btn.selected { background: #fff !important; color: var(--black) !important; border: 2px solid var(--highlight); }
+        .int-btn.wrong-ans { background: var(--error) !important; color: white !important; }
+        .int-btn.correct-ans { background: var(--success) !important; color: white !important; }
+        .btn-group { display: flex; gap: 12px; width: 100%; justify-content: center; margin-bottom: 15px; }
+        .main-btn { flex: 1; max-width: 160px; padding: 14px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; }
+        #instructions-footer { width: 100%; font-size: 12px; color: #7f8c8d; text-align: center; padding: 10px; border-top: 1px solid #ddd; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-size: 13px; z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+    </style>
+</head>
+<body>
+<button id="exit-zen-btn" onclick="toggleZen()">✕ Exit Zen Mode</button>
+<div id="app-container">
+    <div id="header-tools">
+        <div class="left-controls-group">
+            <button id="btnMode0" class="mode-btn" onclick="setMode(0)">Note</button>
+            <button id="btnMode2" class="mode-btn" onclick="setMode(2)">Root</button>
+            <button id="btnMode1" class="mode-btn" onclick="setMode(1)">Interval</button>
+            <button id="btnModeShuffle" class="mode-btn" onclick="setMode('shuffle')">Mix</button>
+        </div>
+
+        <div class="right-controls-group">
+            <label class="toggle-container">
+                <input type="checkbox" id="showNoteNames" checked onchange="updateQuestionDisplay()">
+                <span>ABC</span>
+            </label>
+            <div class="zen-btn" onclick="toggleZen()">🧘 Zen</div>
+            <select id="langSelect" class="select-tool" onchange="changeLanguage(this.value)">
+                <option value="de">DE</option>
+                <option value="en" selected>EN</option>
+                <option value="es">ES</option>
+                <option value="fr">FR</option>
+                <option value="it">IT</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="piano-wrapper"><div id="piano"></div></div>
+    <div id="question-box"><div id="question"></div><div id="feedback"></div></div>
+    <div id="controls"></div>
+
+    <div class="btn-group">
+        <button id="action-btn" class="main-btn" style="background:#2c3e50" onclick="nextQuestion()">GO</button>
+        <button id="clear-btn" class="main-btn" style="background:#95a5a6" onclick="clearSelection()">CLEAR</button>
+        <button id="reset-btn" class="main-btn" style="background:var(--reset)" onclick="hardReset()">RESET</button>
+    </div>
+
+    <div id="instructions-footer">
+        <span>🎹 <b>Note Mode:</b> Find target relative to yellow key.</span>
+        <span>🧠 <b>ABC Off:</b> Practice visual positions.</span>
+        <span>🧘 <b>Zen:</b> Focus mode (Exit with <b>ESC</b>).</span>
+    </div>
+</div>
+<div id="toast" class="toast">Press ESC to return</div>
+
+<script>
+    const ALL_INTERVALS_LIST = [{name:"b2",v:1},{name:"2",v:2},{name:"#2",v:3},{name:"b3",v:3},{name:"3",v:4},{name:"4",v:5},{name:"#4",v:6},{name:"b5",v:6},{name:"5",v:7},{name:"#5",v:8},{name:"b6",v:8},{name:"6",v:9},{name:"b7",v:10},{name:"7",v:11},{name:"8",v:12},{name:"b9",v:13},{name:"9",v:14},{name:"#9",v:15},{name:"11",v:17},{name:"#11",v:18},{name:"b13",v:20},{name:"13",v:21}];
+    const ALL_INTERVALS = {}; ALL_INTERVALS_LIST.forEach(i => ALL_INTERVALS[i.name] = i.v);
+
+    const SPECIFIC_NOTES_MAP = {
+        en: ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"],
+        fr: ["Do", "Do#", "Ré", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si"],
+        de: ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "H"],
+        es: ["Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si"],
+        it: ["Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si"]
+    };
+
+    const i18n = {
+        en: { anon:"This note", init:"Select intervals ↓", questNote:"Find the <strong>{int}</strong> of <strong>{root}</strong>", questRoot:"<strong>{target}</strong> is the <strong>{int}</strong> of which note?", questIdent:"What is the interval?", success:"✅ CORRECT!", error:"❌ TRY AGAIN", alert:"⚠️ Select intervals!", zenHint:"Press ESC or use the button to return" },
+        fr: { anon:"Cette note", init:"Sélectionnez ↓", questNote:"Trouvez la <strong>{int}</strong> de <strong>{root}</strong>", questRoot:"<strong>{target}</strong> est la <strong>{int}</strong> de quelle note ?", questIdent:"Intervalle ?", success:"✅ BRAVO !", error:"❌ RÉESSAYE", alert:"⚠️ Sélectionnez !", zenHint:"Appuyez sur ESC pour quitter" },
+        de: { anon:"Dieser Ton", init:"Wählen ↓", questNote:"Finde die <strong>{int}</strong> von <strong>{root}</strong>", questRoot:"<strong>{target}</strong> ist die <strong>{int}</strong> welcher Note?", questIdent:"Intervall?", success:"✅ RICHTIG!", error:"❌ NOCHMAL", alert:"⚠️ Wählen!", zenHint:"ESC zum Beenden" },
+        es: { anon:"Esta nota", init:"Selecciona ↓", questNote:"Busca la <strong>{int}</strong> de <strong>{root}</strong>", questRoot:"<strong>{target}</strong> es la <strong>{int}</strong> ¿de qué nota?", questIdent:"¿Intervalo?", success:"✅ ¡CORRECTO!", error:"❌ REINTENTA", alert:"⚠️ Selecciona!", zenHint:"Pulsa ESC para salir" },
+        it: { anon:"Questa nota", init:"Seleziona ↓", questNote:"Trova la <strong>{int}</strong> di <strong>{root}</strong>", questRoot:"<strong>{target}</strong> è la <strong>{int}</strong> di quale nota?", questIdent:"Intervallo?", success:"✅ CORRETTO!", error:"❌ RIPROVA", alert:"⚠️ Seleziona!", zenHint:"Premi ESC per uscire" }
+    };
+
+    let curL='en', curM=0, effM=0, selI=[], lastP=null, lastR=0, prevQ="", tarIdx=-1, curV=-1;
+
+    function getNoteN(idx, lang) {
+        if (!document.getElementById('showNoteNames').checked) return i18n[lang].anon;
+        return SPECIFIC_NOTES_MAP[lang][idx % 12];
+    }
+
+    function toggleZen() {
+        const isZen = document.body.classList.toggle('zen-active');
+        if (isZen) {
+            const toast = document.getElementById('toast');
+            toast.innerText = i18n[curL].zenHint; toast.style.opacity = "1";
+            setTimeout(()=> toast.style.opacity = "0", 3000);
+            if (selI.length > 0 && !lastP) nextQuestion();
+        }
+    }
+
+    function generatePiano() {
+        const p = document.getElementById('piano'); p.innerHTML = '';
+        for (let i = 0; i < 31; i++) {
+            const k = document.createElement('div');
+            const isBlackKey = [1, 3, 6, 8, 10].includes(i % 12);
+            k.className = `key ${isBlackKey ? 'black' : 'white'}`;
+            k.dataset.index = i;
+
+            const keyIndex = i;
+            k.addEventListener('mousedown', () => {
+                if(effM !== 1) checkPianoInput(keyIndex, k);
+            });
+            p.appendChild(k);
+        }
+    }
+
+    // FIXED: Formats exactly 22 total items across an 11-column container block
+    function generateControls() {
+        const c = document.getElementById('controls'); c.innerHTML = '';
+        ALL_INTERVALS_LIST.forEach(i => {
+            const b = document.createElement('button'); b.className = 'int-btn'; b.innerText = i.name;
+            b.onclick = () => { if (effM === 1 && curV !== -1) checkIntervalAnswer(i.name, i.v, b); else { b.classList.toggle('selected'); updateSelection(); saveState(); } };
+            c.appendChild(b);
+        });
+    }
+
+    document.addEventListener('keydown', (e) => { if (e.key === "Escape" && document.body.classList.contains('zen-active')) toggleZen(); });
+
+    function updateSelection() { selI = []; document.querySelectorAll('.int-btn.selected').forEach(b => { selI.push({ name: b.innerText, v: ALL_INTERVALS[b.innerText] }); }); }
+
+    function setMode(m, go = true) {
+        curM = m;
+        document.querySelectorAll('.mode-btn').forEach(b => {
+            b.classList.remove('active');
+            if (b.id === 'btnMode'+m || b.innerText.toLowerCase() === (m === 'shuffle' ? 'mix' : (m === 2 ? 'root' : (m === 1 ? 'interval' : 'note')))) {
+                b.classList.add('active');
+            }
+        });
+        resetDisplay();
+        saveState();
+        if (go && selI.length > 0) nextQuestion();
+        else document.getElementById('question').innerHTML = i18n[curL].init;
+    }
+
+    function nextQuestion() {
+        if (selI.length === 0) { document.getElementById('question').innerHTML = `<span style="color:var(--error)">${i18n[curL].alert}</span>`; return; }
+        resetDisplay(); effM = (curM === 'shuffle') ? (Math.floor(Math.random() * 3)) : curM;
+
+        let nr, np, qk;
+
+        do {
+            np = selI[Math.floor(Math.random() * selI.length)];
+            nr = Math.floor(Math.random() * (30 - np.v));
+            qk = `${nr}-${np.v}-${effM}`;
+        } while (qk === prevQ && selI.length > 1);
+
+        lastP = np; lastR = nr; prevQ = qk;
+        const b = document.getElementById('question-box'); b.style.borderTopColor = (effM === 1) ? "var(--target-view)" : (effM === 2 ? "var(--root-color)" : "var(--highlight)");
+        if (effM === 0) { tarIdx = nr + np.v; highlightKey(nr, 'root-key'); }
+        else if (effM === 1) { curV = np.v; highlightKey(nr, 'root-key'); highlightKey(nr + np.v, 'target-view'); document.getElementById('controls').classList.add('challenge-mode'); }
+        else if (effM === 2) { tarIdx = nr; highlightKey(nr + np.v, 'target-view'); }
+        updateQuestionDisplay();
+    }
+
+    function highlightKey(i, c) { const e = document.querySelector(`[data-index="${i}"]`); if (e) e.classList.add(c); }
+    function resetDisplay() { document.querySelectorAll('.key').forEach(k => k.classList.remove('correct', 'wrong', 'root-key', 'target-view')); document.getElementById('controls').classList.remove('challenge-mode'); document.querySelectorAll('.int-btn').forEach(b => b.classList.remove('correct-ans', 'wrong-ans')); document.getElementById('feedback').innerText = ""; tarIdx = -1; curV = -1; }
+    function checkPianoInput(i, e) { if (tarIdx === -1) return; if (i === tarIdx) { e.classList.add('correct'); document.getElementById('feedback').innerText = i18n[curL].success; tarIdx = -1; setTimeout(nextQuestion, 1200); } else { e.classList.add('wrong'); document.getElementById('feedback').innerText = i18n[curL].error; setTimeout(() => e.classList.remove('wrong'), 400); } }
+    function checkIntervalAnswer(n, v, b) { if (curV === -1) return; if (v === curV) { document.getElementById('feedback').innerText = i18n[curL].success + " (" + n + ")"; highlightKey(lastR + curV, 'correct'); b.classList.add('correct-ans'); curV = -1; setTimeout(nextQuestion, 1200); } else { b.classList.add('wrong-ans'); setTimeout(() => b.classList.remove('wrong-ans'), 400); } }
+    function changeLanguage(l) { curL = l; saveState(); if (lastP) updateQuestionDisplay(); else document.getElementById('question').innerHTML = i18n[l].init; }
+
+    function updateQuestionDisplay() {
+        if (!lastP) return;
+        const t = i18n[curL];
+        if (effM === 1) document.getElementById('question').innerHTML = t.questIdent;
+        else if (effM === 0) document.getElementById('question').innerHTML = t.questNote.replace('{int}', lastP.name).replace('{root}', getNoteN(lastR, curL));
+        else if (effM === 2) document.getElementById('question').innerHTML = t.questRoot.replace('{int}', lastP.name).replace('{target}', getNoteN(lastR + lastP.v, curL));
+    }
+
+    function saveState() {
+        const s = {
+            l: curL,
+            m: curM,
+            i: Array.from(document.querySelectorAll('.int-btn.selected')).map(b => b.innerText),
+            n: document.getElementById('showNoteNames').checked
+        };
+        localStorage.setItem('pianoState_v1.4.4', JSON.stringify(s));
+    }
+
+    function loadState() {
+        const s = JSON.parse(localStorage.getItem('pianoState_v1.4.4'));
+        if (s) {
+            curL = s.l; curM = s.m;
+            document.getElementById('langSelect').value = curL;
+            document.getElementById('showNoteNames').checked = s.n !== false;
+            generateControls();
+            document.querySelectorAll('.int-btn').forEach(b => { if (s.i.includes(b.innerText)) b.classList.add('selected'); });
+            updateSelection();
+        } else {
+            generateControls();
+            curM = 0;
+        }
+        setMode(curM, false);
+        changeLanguage(curL);
+    }
+
+    function clearSelection() { document.querySelectorAll('.int-btn.selected').forEach(b => b.classList.remove('selected')); updateSelection(); resetDisplay(); lastP = null; document.getElementById('question').innerHTML = i18n[curL].init; saveState(); }
+    function hardReset() { if (confirm("Reset application?")) { localStorage.clear(); location.reload(); } }
+    function handleResize() { const c = document.getElementById('app-container'); const s = Math.min(window.innerWidth / 900, window.innerHeight / 680, 1); c.style.transform = `scale(${s})`; }
+
+    window.onload = () => {
+        generatePiano();
+        loadState();
+        window.addEventListener('resize', handleResize);
+        handleResize();
+        if ('serviceWorker' in navigator) {
+            const sw = `const C='v1.4.4';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['./']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+            navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+        }
+    };
+</script>
+</body>
+</html>
