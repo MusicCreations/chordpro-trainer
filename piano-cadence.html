@@ -144,13 +144,13 @@ function buildPianoUI() {
     for(let i=0; i<38; i++){
         let nIdx = i % 12;
         if(bPos.indexOf(nIdx)===-1){
-            let k = document.createElement('div'); k.className = 'key white'; k.dataset.idx = i;
+            let k = document.createElement('div'); k.className = 'white key'; k.dataset.idx = i;
             k.innerHTML = '<div class="dot-stack"><div class="dot dot-1"></div><div class="dot dot-2"></div><div class="dot dot-3"></div><div class="dot dot-current"></div></div>';
             pianoKeys.push({el:k, noteIndex:nIdx}); container.appendChild(k);
             k.onclick = () => { k.classList.toggle('active'); updateDebug(); };
 
             if(bPos.indexOf((i+1)%12)!==-1 && (i+1) < 38){
-                let b = document.createElement('div'); b.className = 'key black'; b.dataset.idx = i+1;
+                let b = document.createElement('div'); b.className = 'black key'; b.dataset.idx = i+1;
                 let octavesCount = Math.floor((i+1)/12);
                 let positionInOctave = (i+1)%12;
                 let preciseWhiteKeyIndex = (octavesCount * 7) + physicalPianoOffsets[positionInOctave];
@@ -194,30 +194,50 @@ const customAlterationTable = {
 };
 
 function createCadenceChord(rootName,chordType,inversionType,grade="",keyName="",cadenceFormMode=3){
-    const s=scaleTable[rootName];if(!s)return{name:"",notes:new Array(),indices:new Array(),rootMidiValue:0,grade:grade,voicingFormUsed:inversionType,fullChordName:""};
+    const s=scaleTable[rootName];if(!s)return{name:"",notes:new Array(),indices:new Array(),rootMidiValue:0,grade:grade,voicingFormUsed:inversionType,fullChordName:"",noteNamesInOrder:new Array()};
     let formula=chordFormulaTable[chordType]||chordFormulaTable['Maj7(9)'];
+
     let parsedVoicing=formula.map(intervalsStr=>{
         let alteration='Natural',degreeStr=intervalsStr;
         if(intervalsStr.startsWith('b')){alteration='Bemol';degreeStr=intervalsStr.substring(1);}
         else if(intervalsStr.startsWith('#')){alteration='Sharp';degreeStr=intervalsStr.substring(1);}
-
         let degreeIdx=parseInt(degreeStr);
         let scaleNote=s[degreeIdx];
         return customAlterationTable[alteration][scaleNote];
     });
-    let finalMidiNotes=parsedVoicing.map(nName=>{
-        let midi=getMidiIdx(nName)+60;
-        let chroma = midi % 12;
-        if(inversionType===3){if(chroma===5||chroma===6||chroma===7||chroma===8||chroma===9||chroma===10||chroma===11)midi-=12;}
-        else if(inversionType===7){if(chroma===0||chroma===1||chroma===2||chroma===3||chroma===4)midi+=12;}
-        return midi;
-    });
-    finalMidiNotes.sort((a,b)=>a-b);
-    let lang=appState.currentLang||'en';
 
+    let baseMidiNotes = parsedVoicing.map(nName => getMidiIdx(nName) + 60);
+    let finalMidiNotes = [];
+    let noteNamesInOrder = [];
+
+    if (parseInt(inversionType) === 7) {
+        let note3 = baseMidiNotes[0];
+        let note5 = baseMidiNotes[1];
+        let note7 = baseMidiNotes[2];
+        let note9 = baseMidiNotes[3];
+
+        if (note7 >= note3) note7 -= 12;
+        if (note9 >= note3) note9 -= 12;
+
+        finalMidiNotes = [note7, note9, note3, note5];
+        noteNamesInOrder = [parsedVoicing[2], parsedVoicing[3], parsedVoicing[0], parsedVoicing[1]];
+    } else {
+        let note3 = baseMidiNotes[0];
+        let note5 = baseMidiNotes[1];
+        let note7 = baseMidiNotes[2];
+        let note9 = baseMidiNotes[3];
+
+        if (note5 <= note3) note5 += 12;
+        if (note7 <= note5) note7 += 12;
+        if (note9 <= note7) note9 += 12;
+
+        finalMidiNotes = [note3, note5, note7, note9];
+        noteNamesInOrder = [parsedVoicing[0], parsedVoicing[1], parsedVoicing[2], parsedVoicing[3]];
+    }
+
+    let lang=appState.currentLang||'en';
     let baseTranslationMap = { 'C': 'Do', 'D': 'Ré', 'E': 'Mi', 'F': 'Fa', 'G': 'Sol', 'A': 'La', 'B': 'Si' };
     let baseItSpMap = { 'C': 'Do', 'D': 'Re', 'E': 'Mi', 'F': 'Fa', 'G': 'Sol', 'A': 'La', 'B': 'Si' };
-
     let displayedKeyName=keyName;
     if(lang==='fr' || lang==='it' || lang==='sp') {
         let rootLetter = keyName.charAt(0);
@@ -231,7 +251,7 @@ function createCadenceChord(rootName,chordType,inversionType,grade="",keyName=""
 
     let chordPrintTitle=`${grade}`;
     let labelPrompt=lang==='fr'?`dans la tonalité de ${displayedKeyName}`:lang==='de'?`in der Tonart ${displayedKeyName}`:lang==='it'?`nella tonalità di ${displayedKeyName}`:lang==='sp'?`en la tonalidad de ${displayedKeyName}`:`of ${displayedKeyName}`;
-    return{name:`${chordPrintTitle} ${labelPrompt}`,notes:parsedVoicing,indices:finalMidiNotes,rootMidiValue:getMidiIdx(rootName)+60,grade:grade,voicingFormUsed:inversionType,fullChordName:`${rootName}${chordType}`};
+    return{name:`${chordPrintTitle} ${labelPrompt}`,notes:parsedVoicing,indices:finalMidiNotes,rootMidiValue:getMidiIdx(rootName)+60,grade:grade,voicingFormUsed:inversionType,fullChordName:`${rootName}${chordType}`,noteNamesInOrder:noteNamesInOrder};
 }
 // === CHUNK 3 END ===
 
@@ -313,12 +333,29 @@ document.getElementById('btn-confirm').onclick = function() {
     let confirmBtn = document.getElementById('btn-confirm'); let step = activeChallenge.steps[currentStepIndex];
     if (isReplayMode) { playSequence(activeChallenge.steps); return; }
 
-    let played = new Array();
-    document.querySelectorAll('.key.active').forEach(k => played.push(parseInt(k.dataset.idx)));
-    let targets = step.indices;
+    let playedKeys = new Array();
+    let playedChromas = new Array();
+    document.querySelectorAll('.key.active').forEach(k => {
+        let absoluteIndex = parseInt(k.dataset.idx);
+        playedKeys.push(absoluteIndex + 48);
+        playedChromas.push(absoluteIndex % 12);
+    });
 
-    if(played.length === targets.length && targets.every(idx => played.includes(idx))) {
-        playChord(step.indices, step.rootMidiValue);
+    let targetChromas = step.indices.map(idx => idx % 12);
+
+    let isMatch = (playedChromas.length === targetChromas.length);
+    if (isMatch) {
+        let sortedPlayed = [...playedChromas].sort((a,b)=>a-b);
+        let sortedTargets = [...targetChromas].sort((a,b)=>a-b);
+        for(let i=0; i<sortedTargets.length; i++) {
+            if(sortedPlayed[i] !== sortedTargets[i]) { isMatch = false; break; }
+        }
+    }
+
+    if(isMatch) {
+        playedKeys.sort((a, b) => a - b);
+        step.indices = playedKeys;
+        playChord(playedKeys, step.rootMidiValue);
         document.querySelectorAll('.key.active').forEach(k => {
             k.classList.remove('active');
             k.classList.add(`has-step${currentStepIndex + 1}`);
@@ -388,7 +425,8 @@ function updateDebug() {
     document.querySelectorAll('.key.active').forEach(k => chosen.push(noteNamesList[parseInt(k.dataset.idx)%12]));
     let s = activeChallenge.steps[currentStepIndex]; if (!s) return;
     let label = s.fullChordName.replace(/♭/g, "b").replace(/♯/g, "#");
-    document.getElementById('debug-log').innerHTML = `${s.grade} : ${label}\nTarget Notes: ${s.notes.join(' ')}\nChosen Notes: ${chosen.join(' ')}`;
+    let activeFormSource = `Form ${s.voicingFormUsed}`;
+    document.getElementById('debug-log').innerHTML = `${s.grade} : ${label} [${activeFormSource}]\nTarget Notes: ${s.noteNamesInOrder.join(' ')}\nChosen Notes: ${chosen.join(' ')}`;
 }
 
 document.getElementById('target-text').ondblclick = function() { isDebugMode = !isDebugMode; updateDebug(); };
@@ -409,5 +447,4 @@ updateParadigmMenu(appState.paradigm || 'maj'); updateCategoryMenu(appState.hist
 </script>
 </body>
 </html>
-
 
