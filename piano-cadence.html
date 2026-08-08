@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <title>Harmonic Cadences Practice Tool</title>
     <style>
-        /* // === CHUNK 1 === */
         body{background:#121212;margin:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;height:100vh;font-family:sans-serif;overflow:hidden;touch-action:none}
         .controls-container{position:absolute;top:10px;right:10px;z-index:200;display:flex;flex-direction:column;align-items:flex-end;gap:5px;background:rgba(20,20,20,0.9);padding:6px 8px;border-radius:6px;border:1px solid #333;width:120px;box-sizing:border-box}
         .ui-checkbox-container{display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;cursor:pointer;user-select:none;width:100%;justify-content:space-between;margin-top:2px}
@@ -20,12 +19,11 @@
         .selector-group{background:#222;padding:12px;border-radius:14px;display:flex;flex-direction:column;gap:10px;border:1px solid #444;width:100%;box-sizing:border-box}
         .row{display:flex;gap:6px;width:100%;min-height:35px;flex-wrap:wrap;justify-content:center;align-items:center}
         #piano-container{background:#000;border-radius:8px;display:flex;width:100%;height:250px;position:relative;border:2px solid #333;overflow:hidden;flex-shrink:0}
-
-                .key{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:5px;box-sizing:border-box}
+        .key{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:5px;box-sizing:border-box}
         .white{background:#fff;border:1px solid #bbb;width:calc(100%/22);height:100%;flex-shrink:0;z-index:1}
-        .black{background:#222;z-index:5;position:absolute;width:calc((100%/22)*0.7);height:60%;top:0;border-radius:0 0 3px 3px}
+        .black{background:#222;z-index:5;position:absolute;width:calc((100%/22)*0.7);height:60%;top:0;transform:translateX(-50%);border-radius:0 0 3px 3px}
         .dot-stack { display: flex; flex-direction: column-reverse; gap: 2px; pointer-events: none; margin-bottom: 2px; align-items: center;}
-        .dot{width:32px;height:32px;border-radius:50%;display:none;border:1px solid rgba(255,255,255,.3);font-size:14px;font-weight:bold;color:#fff;line-height:32px;text-align:center}
+        .dot{width:32px;height:32px;border-radius:50%;display:none;border:1px solid rgba(255,255,255,.3);font-size:18px;font-weight:bold;color:#fff;line-height:32px;text-align:center}
         .key.active .dot-current { display: block; background: #28a745; box-shadow: 0 0 8px #28a745; }
         .key.has-step1 .dot-1 { display: block; background: #007bff; }
         .key.has-step2 .dot-2 { display: block; background: #6f42c1; }
@@ -48,32 +46,40 @@
     <div class="control-row-item">
         <span>Form:</span>
         <select id="voicing-dropdown-list" class="control-panel-select">
-            <option value="3">3</option><option value="7">7</option><option value="3/7">3/7</option><option value="Syn">Syn</option>
+            <option value="3">3</option>
+            <option value="7">7</option>
+            <option value="3/7">3/7</option>
+            <option value="Syn">Syn</option>
         </select>
     </div>
-    <label class="ui-checkbox-container" for="play-cb">Play <input type="checkbox" id="play-cb" checked></label>
-    <label class="ui-checkbox-container" for="auto-cb">Auto <input type="checkbox" id="auto-cb"></label>
+    <label class="ui-checkbox-container">Play <input type="checkbox" id="play-cb" checked></label>
+    <label class="ui-checkbox-container">Auto <input type="checkbox" id="auto-cb"></label>
 </div>
 <div class="top-section">
-    <div class="selector-group"><div id="paradigm-row" class="row"></div><div id="type-row" class="row"></div></div>
+    <div class="selector-group">
+        <div id="paradigm-row" class="row"></div>
+        <div id="type-row" class="row"></div>
+    </div>
 </div>
 <div id="main-app-container">
     <div id="display-row"><div id="debug-log"></div><div id="target-text">READY</div></div>
     <div id="piano-container"></div>
 </div>
 <div class="bottom-actions">
-    <button id="btn-new" class="action-btn">NEW</button><button id="btn-confirm" class="action-btn">CONFIRM</button><button id="btn-reset" class="action-btn">RESET</button>
+    <button id="btn-new" class="action-btn">NEW</button>
+    <button id="btn-confirm" class="action-btn">CONFIRM</button>
+    <button id="btn-reset" class="action-btn">RESET</button>
 </div>
 <script>
+// === CHUNK 1 END ===
 
-// === CHUNK 2 ===
+// === CHUNK 2 START ===
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
 function playChord(indices, rootMidi = null, delay = 0) {
     if (!document.getElementById('play-cb').checked) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
     indices.forEach(midi => {
-        const freq = 440 * Math.pow(2, (midi + 60 - 69) / 12);
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
         gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
@@ -94,16 +100,21 @@ function playChord(indices, rootMidi = null, delay = 0) {
         oscB.start(audioCtx.currentTime + delay); oscB.stop(audioCtx.currentTime + delay + 1.6);
     }
 }
-
 function playSequence(steps) { steps.forEach((s, i) => playChord(s.indices, s.rootMidiValue, i * 1.4)); }
 
 const scaleTable = {
-    "A":  "X,A,B,C#,D,E,F#,G#,A,B,C#,D,E,F#,G#".split(","), "Ab": "X,Ab,Bb,C,Db,Eb,F,G,Ab,Bb,C,Db,Eb,F,G".split(","),
-    "B":  "X,B,C#,D#,E,F#,G#,A#,B,C#,D#,E,F#,G#,A#".split(","), "Bb": "X,Bb,C,D,Eb,F,G,A,Bb,C,D,Eb,F,G,A".split(","),
-    "C":  "X,C,D,E,F,G,A,B,C,D,E,F,G,A,B".split(","), "C#": "X,C#,D#,E#,F#,G#,A#,B#,C#,D#,E#,F#,G#,A#,B#".split(","),
-    "Db": "X,Db,Eb,F,Gb,Ab,Bb,C,Db,Eb,F,Gb,Ab,Bb,C".split(","), "E":  "X,E,F#,G#,A,B,C#,D#,E,F#,G#,A,B,C#,D#".split(","),
-    "Eb": "X,Eb,F,G,Ab,Bb,C,D,Eb,F,G,Ab,Bb,C,D".split(","), "F":  "X,F,G,A,Bb,C,D,E,F,G,A,Bb,C,D,E".split(","),
-    "F#": "X,F#,G#,A#,B,C#,D#,E#,F#,G#,A#,B,C#,D#,E#".split(","), "Gb": "X,Gb,Ab,Bb,Cb,Db,Eb,F,Gb,Ab,Bb,Cb,Db,Eb,F".split(","),
+    "A":  "X,A,B,C#,D,E,F#,G#,A,B,C#,D,E,F#,G#".split(","),
+    "Ab": "X,Ab,Bb,C,Db,Eb,F,G,Ab,Bb,C,Db,Eb,F,G".split(","),
+    "B":  "X,B,C#,D#,E,F#,G#,A#,B,C#,D#,E,F#,G#,A#".split(","),
+    "Bb": "X,Bb,C,D,Eb,F,G,A,Bb,C,D,Eb,F,G,A".split(","),
+    "C":  "X,C,D,E,F,G,A,B,C,D,E,F,G,A,B".split(","),
+    "C#": "X,C#,D#,E#,F#,G#,A#,B#,C#,D#,E#,F#,G#,A#,B#".split(","),
+    "Db": "X,Db,Eb,F,Gb,Ab,Bb,C,Db,Eb,F,Gb,Ab,Bb,C".split(","),
+    "E":  "X,E,F#,G#,A,B,C#,D#,E,F#,G#,A,B,C#,D#".split(","),
+    "Eb": "X,Eb,F,G,Ab,Bb,C,D,Eb,F,G,Ab,Bb,C,D".split(","),
+    "F":  "X,F,G,A,Bb,C,D,E,F,G,A,Bb,C,D,E".split(","),
+    "F#": "X,F#,G#,A#,B,C#,D#,E#,F#,G#,A#,B,C#,D#,E#".split(","),
+    "Gb": "X,Gb,Ab,Bb,Cb,Db,Eb,F,Gb,Ab,Bb,Cb,Db,Eb,F".split(","),
     "G":  "X,G,A,B,C,D,E,F#,G,A,B,C,D,E,F#".split(",")
 };
 
@@ -114,49 +125,50 @@ const alterationTable = {
     "D#":  {N:"D#", B:"D",  S:"E"},  "Db":  {N:"Db", B:"C",  S:"D"},  "E":   {N:"E",  B:"Eb", S:"F"},
     "E#":  {N:"F",  B:"E",  S:"F#"}, "Eb":  {N:"Eb", B:"D",  S:"E"},  "F":   {N:"F",  B:"E",  S:"F#"},
     "F#":  {N:"F#", B:"F",  S:"G"},  "Fb":  {N:"E",  B:"Eb", S:"F"},  "G":   {N:"G",  B:"Gb", S:"G#"},
-    "Gb":  {N:"Gb", B:"F",  S:"G"},  "G#":  {N:"G#", B:"G",  S:"A"},  "Cb":  {N:"Cb", B:"Bb", S:"C"}
+    "Gb":  {N:"Gb", B:"F",  S:"G"},  "G#":  {N:"G#", B:"G",  S:"A"},  "Cb":  {N:"B",  B:"Bb", S:"C"}
 };
-
 const noteNamesList = "C,Db,D,Eb,E,F,Gb,G,Ab,A,Bb,B".split(",");
-let activeChallenge = null, currentStepIndex = 0, pianoKeys = [], isDebugMode = false, isReplayMode = false;
-let appState = { play: true, auto: false, paradigm: 'maj', history: ['ii-V-I'], activeVoicing: '3/7', currentLang: 'en', exerciseHistory: [] };
-
-// FIXED: Label modifications applied to match "Maj" and "min" text formatting styles explicitly
-const paradigmList = [{ id: 'maj', label: 'Maj' }, { id: 'min', label: 'min' }, { id: 'color1', label: 'Color1' }, { id: 'color2', label: 'Color2' }, { id: 'color3', label: 'Color3' }, { id: 'color4', label: 'Color4' }];
+let activeChallenge = null, currentStepIndex = 0, pianoKeys = new Array(), isDebugMode = false, isReplayMode = false;
+let appState = { play: true, auto: false, paradigm: 'maj', history: ['ii-V-I'], activeVoicing: '3/7', currentLang: 'en', exerciseHistory: new Array() };
+const paradigmList = [{ id: 'maj', label: 'Maj' }, { id: 'min', label: 'Min' }, { id: 'color1', label: 'Color1' }, { id: 'color2', label: 'Color2' }, { id: 'color3', label: 'Color3' }, { id: 'color4', label: 'Color4' }];
 const translations = {
     en: { correct: 'CORRECT!', tryAgain: 'TRY AGAIN' }, de: { correct: 'RICHTIG!', tryAgain: 'VERSUCHE ES' },
     fr: { correct: 'CORRECT !', tryAgain: 'RÉESSAYER' }, it: { correct: 'CORRETTO!', tryAgain: 'RIPROVA' }, sp: { correct: '¡CORRECTO!', tryAgain: 'INTÉNTALO' }
 };
 
 function buildPianoUI() {
-    const container = document.getElementById('piano-container'); container.innerHTML = ''; pianoKeys = [];
-    const bPos = "1,3,6,8,10".split(",").map(Number); let whiteCount = 0;
-    for (let i = 0; whiteCount < 22; i++) {
+    const container = document.getElementById('piano-container'); container.innerHTML = ''; pianoKeys = new Array();
+    const bPos = "1,3,6,8,10".split(",").map(Number);
+    const physicalPianoOffsets = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
+
+    for(let i=0; i<38; i++){
         let nIdx = i % 12;
-        if (bPos.indexOf(nIdx) === -1) {
+        if(bPos.indexOf(nIdx)===-1){
             let k = document.createElement('div'); k.className = 'key white'; k.dataset.idx = i;
             k.innerHTML = '<div class="dot-stack"><div class="dot dot-1"></div><div class="dot dot-2"></div><div class="dot dot-3"></div><div class="dot dot-current"></div></div>';
-            pianoKeys.push({el: k, noteIndex: nIdx, midiIdx: i}); container.appendChild(k);
-            let currentWhiteKeyIndex = whiteCount; whiteCount++;
-            let nextNIdx = (i + 1) % 12;
-            if (bPos.indexOf(nextNIdx) !== -1) {
-                let b = document.createElement('div'); b.className = 'key black'; b.dataset.idx = i + 1;
-                b.style.left = ((currentWhiteKeyIndex + 1) * (100 / 22)) + "%";
+            pianoKeys.push({el:k, noteIndex:nIdx}); container.appendChild(k);
+            k.onclick = () => { k.classList.toggle('active'); updateDebug(); };
+
+            if(bPos.indexOf((i+1)%12)!==-1 && (i+1) < 38){
+                let b = document.createElement('div'); b.className = 'key black'; b.dataset.idx = i+1;
+                let octavesCount = Math.floor((i+1)/12);
+                let positionInOctave = (i+1)%12;
+                let preciseWhiteKeyIndex = (octavesCount * 7) + physicalPianoOffsets[positionInOctave];
+                b.style.left = (preciseWhiteKeyIndex * (100 / 22)) + "%";
                 b.innerHTML = '<div class="dot-stack"><div class="dot dot-1"></div><div class="dot dot-2"></div><div class="dot dot-3"></div><div class="dot dot-current"></div></div>';
-                pianoKeys.push({el: b, noteIndex: nextNIdx, midiIdx: i + 1});
-                b.onclick = (e) => { e.stopPropagation(); b.classList.toggle('active'); if (typeof updateDebug === 'function') updateDebug(); };
+                b.onclick = () => { b.classList.toggle('active'); updateDebug(); };
                 container.appendChild(b);
             }
-            k.onclick = () => { k.classList.toggle('active'); if (typeof updateDebug === 'function') updateDebug(); };
         }
     }
 }
+// === CHUNK 2 END ===
 
-// === CHUNK 3 ===
+// === CHUNK 3 START ===
 function getMidiIdx(name) {
-    if (!name) return 0;
-    const normalizationMap = { 'C#':'Db', 'D#':'Eb', 'F#':'Gb', 'G#':'Ab', 'A#':'Bb', 'Cb':'B', 'B#':'C', 'E#':'F', 'Fb':'E' };
-    let cleanName = normalizationMap[name] || name; return noteNamesList.indexOf(cleanName);
+    let clean = name.replace('C#','Db').replace('D#','Eb').replace('F#','Gb').replace('G#','Ab').replace('A#','Bb')
+                    .replace('E#','F').replace('B#','C').replace('Fb','E').replace('Cb','B');
+    return noteNamesList.indexOf(clean);
 }
 
 const chordFormulaTable = {
@@ -167,8 +179,6 @@ const chordFormulaTable = {
     'm(Maj7)':["b3","5","7","9"],'7(b9,b13)':["3","b13","b7","b9"],'7sus(b9,13)':["4","13","b7","9"],
     '7(#9,b13)':["3","b13","b7","#9"]
 };
-
-// FIXED: Base dynamic lookup steps adjusted so standard progressions find accurate diatonic degrees safely (e.g., ii of Db Maj resolves directly to Eb)
 const cadenceParadigmTable = {
     'maj': [{d:2,t:'m7(9)',g:'ii'},{d:5,t:'7(9)',g:'V'},{d:1,t:'Maj7(9)',g:'I'}],
     'min': [{d:2,t:'m7b5(9)',g:'ii'},{d:5,t:'7(b9)',g:'V'},{d:1,t:'m7(9)',g:'i'}],
@@ -177,7 +187,6 @@ const cadenceParadigmTable = {
     'color3':[{d:2,t:'m7b5(9)',g:'ii'},{d:5,t:'7(b9,b13)',g:'V'},{d:1,t:'m(6,9)',g:'i'}],
     'color4':[{d:5,t:'7sus(b9,13)',g:'V7sus'},{d:5,t:'7(#9,b13)',g:'V'},{d:1,t:'m(Maj7,9)',g:'i'}]
 };
-
 const customAlterationTable = {
     "Natural":{"A":"A","A#":"A#","Ab":"Ab","B":"B","B#":"B#","Bb":"Bb","C":"C","C#":"C#","Cb":"Cb","D":"D","D#":"D#","Db":"Db","E":"E","E#":"E#","Eb":"Eb","F":"F","F#":"F#","Fb":"Fb","G":"G","Gb":"Gb","G#":"G#"},
     "Bemol":{"A":"Ab","A#":"A","Ab":"G","B":"Bb","B#":"B","Bb":"A","C":"B","C#":"C","Cb":"Bb","D":"Db","D#":"D","Db":"C","E":"Eb","E#":"E","Eb":"D","F":"E","F#":"F","Fb":"Eb","G":"Gb","Gb":"F","G#":"G"},
@@ -185,115 +194,220 @@ const customAlterationTable = {
 };
 
 function createCadenceChord(rootName,chordType,inversionType,grade="",keyName="",cadenceFormMode=3){
-    const s = scaleTable[rootName]; if(!s) return {name:"",notes:[],indices:[],rootMidiValue:0,grade:grade,voicingFormUsed:inversionType,fullChordName:""};
-    let formula = chordFormulaTable[chordType] || chordFormulaTable['Maj7(9)'];
-    let parsedVoicing = formula.map(intervalsStr=>{
-        let alteration = 'Natural', degreeStr = intervalsStr;
+    const s=scaleTable[rootName];if(!s)return{name:"",notes:new Array(),indices:new Array(),rootMidiValue:0,grade:grade,voicingFormUsed:inversionType,fullChordName:""};
+    let formula=chordFormulaTable[chordType]||chordFormulaTable['Maj7(9)'];
+    let parsedVoicing=formula.map(intervalsStr=>{
+        let alteration='Natural',degreeStr=intervalsStr;
         if(intervalsStr.startsWith('b')){alteration='Bemol';degreeStr=intervalsStr.substring(1);}
         else if(intervalsStr.startsWith('#')){alteration='Sharp';degreeStr=intervalsStr.substring(1);}
-        let degreeIdx = parseInt(degreeStr); let scaleNote = s[degreeIdx]; return customAlterationTable[alteration][scaleNote] || scaleNote;
+
+        let degreeIdx=parseInt(degreeStr);
+        let scaleNote=s[degreeIdx];
+        return customAlterationTable[alteration][scaleNote];
     });
-    let finalMidiNotes = parsedVoicing.map(nName=>{
-        let midi = getMidiIdx(nName) + 60;
-        if(inversionType === 3){ if(["F","F#","G","G#","A","A#","B","Bb"].includes(nName)) midi -= 12; }
-        else if(inversionType === 7){ if(["C","C#","D","D#","E"].includes(nName)) midi += 12; }
+    let finalMidiNotes=parsedVoicing.map(nName=>{
+        let midi=getMidiIdx(nName)+60;
+        let chroma = midi % 12;
+        if(inversionType===3){if(chroma===5||chroma===6||chroma===7||chroma===8||chroma===9||chroma===10||chroma===11)midi-=12;}
+        else if(inversionType===7){if(chroma===0||chroma===1||chroma===2||chroma===3||chroma===4)midi+=12;}
         return midi;
     });
     finalMidiNotes.sort((a,b)=>a-b);
-    let lang = appState.currentLang || 'en'; let displayedKeyName = keyName;
-    if(['fr','it','sp'].includes(lang)) {
-        const solfeggioMap = { 'C#':'Do#', 'Db':'Réb', 'D#':'Ré#', 'Eb':'Mib', 'F#':'Fa#', 'Gb':'Solb', 'G#':'Sol#', 'Ab':'Lab', 'A#':'Lab', 'Bb':'Sib', 'C':'Do', 'D':'Ré', 'E':'Mi', 'F':'Fa', 'G':'Sol', 'A':'La', 'B':'Si' };
-        if(lang === 'it' || lang === 'sp') { solfeggioMap['D#']='Re#'; solfeggioMap['Eb']='Mib'; solfeggioMap['D']='Re'; }
-        displayedKeyName = solfeggioMap[displayedKeyName] || displayedKeyName;
-    } else if(lang === 'de') { if(displayedKeyName === 'Bb') displayedKeyName = 'B'; else if(displayedKeyName === 'B') displayedKeyName = 'H'; }
+    let lang=appState.currentLang||'en';
 
-    // FIXED: Format updated to strip brackets entirely surrounding the grade title label
-    let chordPrintTitle = `${grade}`;
-    let labelPrompt = lang === 'fr' ? `dans la tonalité de ${displayedKeyName}` : lang === 'de' ? `in der Tonart ${displayedKeyName}` : lang === 'it' ? `nella tonalità di ${displayedKeyName}` : lang === 'sp' ? `en la tonalidad de ${displayedKeyName}` : `of ${displayedKeyName}`;
-    return { name: `${chordPrintTitle} ${labelPrompt}`, notes: parsedVoicing, indices: finalMidiNotes, rootMidiValue: getMidiIdx(rootName) + 60, grade: grade, voicingFormUsed: inversionType, fullChordName: `${rootName}${chordType}` };
+    let baseTranslationMap = { 'C': 'Do', 'D': 'Ré', 'E': 'Mi', 'F': 'Fa', 'G': 'Sol', 'A': 'La', 'B': 'Si' };
+    let baseItSpMap = { 'C': 'Do', 'D': 'Re', 'E': 'Mi', 'F': 'Fa', 'G': 'Sol', 'A': 'La', 'B': 'Si' };
+
+    let displayedKeyName=keyName;
+    if(lang==='fr' || lang==='it' || lang==='sp') {
+        let rootLetter = keyName.charAt(0);
+        let accidental = keyName.substring(1);
+        let translatedRoot = lang==='fr' ? baseTranslationMap[rootLetter] : baseItSpMap[rootLetter];
+        displayedKeyName = (translatedRoot || rootLetter) + accidental;
+    } else if(lang==='de'){
+        if(keyName === 'Bb') displayedKeyName = 'B';
+        else if(keyName === 'B') displayedKeyName = 'H';
+    }
+
+    let chordPrintTitle=`${grade}`;
+    let labelPrompt=lang==='fr'?`dans la tonalité de ${displayedKeyName}`:lang==='de'?`in der Tonart ${displayedKeyName}`:lang==='it'?`nella tonalità di ${displayedKeyName}`:lang==='sp'?`en la tonalidad de ${displayedKeyName}`:`of ${displayedKeyName}`;
+    return{name:`${chordPrintTitle} ${labelPrompt}`,notes:parsedVoicing,indices:finalMidiNotes,rootMidiValue:getMidiIdx(rootName)+60,grade:grade,voicingFormUsed:inversionType,fullChordName:`${rootName}${chordType}`};
 }
+// === CHUNK 3 END ===
 
-// === CHUNK 4 ===
-function generateNewExercise(forcedDegreeIdx = null) {
-    currentStepIndex = 0; if (typeof saveState === 'function') saveState(); isReplayMode = false;
-    const confirmBtn = document.getElementById('btn-confirm'); confirmBtn.innerText = "CONFIRM"; confirmBtn.classList.remove('replay-mode');
+// === CHUNK 4 START ===
+function generateNewExercise() {
+    currentStepIndex = 0;
+    saveState(); isReplayMode = false; document.getElementById('btn-confirm').innerText = "CONFIRM";
+    document.getElementById('btn-confirm').classList.remove('replay-mode');
     document.querySelectorAll('.key').forEach(k => {
         k.className = k.className.split(' ').filter(x => x === 'key' || x === 'white' || x === 'black').join(' ');
-        ['.dot-1', '.dot-2', '.dot-3'].forEach(sel => { let targetDot = k.querySelector(sel); if (targetDot) targetDot.textContent = ""; });
+        k.querySelector('.dot-1').innerText = ""; k.querySelector('.dot-2').innerText = ""; k.querySelector('.dot-3').innerText = "";
     });
+
     let currentParadigm = appState.paradigm || 'maj', baseForm = appState.activeVoicing, rootName = "", type = "";
+
     if (baseForm === '3/7' && appState.forcedNextForm === 7 && appState.lastRootName) {
         rootName = appState.lastRootName; type = appState.lastType || 'ii-V-I'; baseForm = '7'; appState.forcedNextForm = null;
     } else {
-        let types = appState.history; if (types.length === 0) types = ['ii-V-I']; type = types[Math.floor(Math.random() * types.length)];
-        const pool = "C,Db,D,Eb,E,F,G,Ab,A,Bb,B,Gb".split(","); if (!appState.exerciseHistory) appState.exerciseHistory = [];
-        let availablePool = pool.filter(note => appState.exerciseHistory.indexOf(note) === -1); if (availablePool.length === 0) availablePool = pool;
-        rootName = availablePool[Math.floor(Math.random() * availablePool.length)]; appState.exerciseHistory.push(rootName);
+        let types = appState.history; if (!types || types.length === 0) types = ['ii-V-I']; type = types[Math.floor(Math.random() * types.length)];
+        const pool = "C,Db,D,Eb,E,F,G,Ab,A,Bb,B,Gb".split(",");
+        if (!appState.exerciseHistory) appState.exerciseHistory = new Array();
+        let availablePool = pool.filter(note => appState.exerciseHistory.indexOf(note) === -1);
+        if (availablePool.length === 0) availablePool = pool;
+        rootName = availablePool[Math.floor(Math.random() * availablePool.length)];
+        appState.exerciseHistory.push(rootName);
         if (appState.exerciseHistory.length > 3) appState.exerciseHistory.shift();
-        if (baseForm === '3/7') { baseForm = '3'; appState.forcedNextForm = 7; appState.lastRootName = rootName; appState.lastType = type; } else { appState.forcedNextForm = null; }
+
+        if (baseForm === '3/7') {
+            baseForm = '3'; appState.forcedNextForm = 7; appState.lastRootName = rootName; appState.lastType = type;
+        } else {
+            appState.forcedNextForm = null;
+        }
     }
+
     const mainScale = scaleTable[rootName]; if (!mainScale) return;
-    if (appState.activeVoicing === 'Syn') { let chrIdx = getMidiIdx(rootName) % 12; baseForm = (chrIdx >= 0 && chrIdx <= 4) ? '3' : '7'; }
-    let stepsConfig = cadenceParadigmTable[currentParadigm]; let f1, f2, f3;
-    if (baseForm === '3') { if (currentParadigm === 'color2' || currentParadigm === 'color4') { f1 = 7; f2 = 7; f3 = 3; } else { f1 = 3; f2 = 7; f3 = 3; } }
-    else { if (currentParadigm === 'color2' || currentParadigm === 'color4') { f1 = 3; f2 = 3; f3 = 7; } else { f1 = 7; f2 = 3; f3 = 7; } }
+
+    if (appState.activeVoicing === 'Syn') {
+        let chrIdx = getMidiIdx(rootName) % 12;
+        baseForm = (chrIdx >= 0 && chrIdx <= 4) ? '3' : '7';
+    }
+
+    let stepsConfig = cadenceParadigmTable[currentParadigm];
+    let f1, f2, f3;
+    if (baseForm === '3') {
+        if (currentParadigm === 'color2' || currentParadigm === 'color4') { f1 = 7; f2 = 7; f3 = 3; } else { f1 = 3; f2 = 7; f3 = 3; }
+    } else {
+        if (currentParadigm === 'color2' || currentParadigm === 'color4') { f1 = 3; f2 = 3; f3 = 7; } else { f1 = 7; f2 = 3; f3 = 7; }
+    }
+
     try {
         let chord1Root = mainScale[stepsConfig[0].d], chord2Root = mainScale[stepsConfig[1].d], chord3Root = mainScale[stepsConfig[2].d];
         let formLabel = appState.activeVoicing === 'Syn' ? `S:${baseForm}` : baseForm;
-        if (type === 'ii-V-I') { activeChallenge = { steps: [createCadenceChord(chord1Root, stepsConfig[0].t, f1, stepsConfig[0].g, rootName, formLabel), createCadenceChord(chord2Root, stepsConfig[1].t, f2, stepsConfig[1].g, rootName, formLabel), createCadenceChord(chord3Root, stepsConfig[2].t, f3, stepsConfig[2].g, rootName, formLabel)], total: 3 }; }
-        else if (type === 'ii-V') { activeChallenge = { steps: [createCadenceChord(chord1Root, stepsConfig[0].t, f1, stepsConfig[0].g, rootName, formLabel), createCadenceChord(chord2Root, stepsConfig[1].t, f2, stepsConfig[1].g, rootName, formLabel)], total: 2 }; }
-        else if (type === 'V-I') { activeChallenge = { steps: [createCadenceChord(chord2Root, stepsConfig[1].t, f2, stepsConfig[1].g, rootName, formLabel), createCadenceChord(chord3Root, stepsConfig[2].t, f3, stepsConfig[2].g, rootName, formLabel)], total: 2 }; }
+
+        let calculatedSteps = [
+            createCadenceChord(chord1Root, stepsConfig[0].t, f1, stepsConfig[0].g, rootName, formLabel),
+            createCadenceChord(chord2Root, stepsConfig[1].t, f2, stepsConfig[1].g, rootName, formLabel),
+            createCadenceChord(chord3Root, stepsConfig[2].t, f3, stepsConfig[2].g, rootName, formLabel)
+        ];
+
+        if (type === 'ii-V-I') {
+            activeChallenge = { steps: [calculatedSteps[0], calculatedSteps[1], calculatedSteps[2]], total: 3 };
+        } else if (type === 'ii-V') {
+            activeChallenge = { steps: [calculatedSteps[0], calculatedSteps[1]], total: 2 };
+        } else if (type === 'V-I') {
+            activeChallenge = { steps: [calculatedSteps[1], calculatedSteps[2]], total: 2 };
+        }
         if (!activeChallenge.steps[currentStepIndex]?.name) return;
-        let cleanStr = activeChallenge.steps[currentStepIndex].name; document.getElementById('target-text').innerText = `${cleanStr} ${currentParadigm === 'min' ? 'min' : currentParadigm.toUpperCase()}`;
-        document.getElementById('target-text').style.color = "#0fc"; if (typeof updateDebug === 'function') updateDebug();
+
+        let cleanStr = activeChallenge.steps[currentStepIndex].name;
+        let suffixMode = (currentParadigm === 'maj' || currentParadigm === 'color1' || currentParadigm === 'color2') ? 'Maj' : 'min';
+        document.getElementById('target-text').innerText = `${cleanStr} ${suffixMode}`;
+        document.getElementById('target-text').style.color = "#0fc"; updateDebug();
     } catch (e) { console.error(e); }
 }
-
-// === CHUNK 5 ===
 document.getElementById('btn-new').onclick = function() { generateNewExercise(); };
+
 document.getElementById('btn-confirm').onclick = function() {
-    if(!activeChallenge) return; let confirmBtn = document.getElementById('btn-confirm'); let step = activeChallenge.steps[currentStepIndex];
+    if(!activeChallenge) return;
+    let confirmBtn = document.getElementById('btn-confirm'); let step = activeChallenge.steps[currentStepIndex];
     if (isReplayMode) { playSequence(activeChallenge.steps); return; }
-    let played = []; document.querySelectorAll('.key.active').forEach(k => played.push(parseInt(k.dataset.idx) % 12));
-    let targets = step.indices.map(x => x % 12);
+
+    let played = new Array();
+    document.querySelectorAll('.key.active').forEach(k => played.push(parseInt(k.dataset.idx)));
+    let targets = step.indices;
+
     if(played.length === targets.length && targets.every(idx => played.includes(idx))) {
         playChord(step.indices, step.rootMidiValue);
-        document.querySelectorAll('.key.active').forEach(k => { k.classList.remove('active'); k.classList.add(`has-step${currentStepIndex + 1}`); let innerTextDot = k.querySelector(`.dot-${currentStepIndex + 1}`); if (innerTextDot) innerTextDot.textContent = step.grade; });
+        document.querySelectorAll('.key.active').forEach(k => {
+            k.classList.remove('active');
+            k.classList.add(`has-step${currentStepIndex + 1}`);
+            k.querySelector(`.dot-${currentStepIndex + 1}`).innerText = step.grade;
+        });
         if (currentStepIndex + 1 >= activeChallenge.total) {
-            document.getElementById('target-text').innerText = translations[appState.currentLang || 'en'].correct; confirmBtn.innerText = "PLAY"; confirmBtn.classList.add('replay-mode'); isReplayMode = true;
-            if(document.getElementById('auto-cb').checked) { let delay = (appState.forcedNextForm === 7) ? 1800 : 4500; setTimeout(() => generateNewExercise(), delay); }
-        } else { setTimeout(() => { currentStepIndex++; let cleanNs = activeChallenge.steps[currentStepIndex].name; let currentParadigm = appState.paradigm || 'maj'; document.getElementById('target-text').innerText = `${cleanNs} ${currentParadigm === 'min' ? 'min' : currentParadigm.toUpperCase()}`; if (typeof updateDebug === 'function') updateDebug(); }, 1200); }
+            document.getElementById('target-text').innerText = translations[appState.currentLang || 'en'].correct;
+            confirmBtn.innerText = "PLAY"; confirmBtn.classList.add('replay-mode'); isReplayMode = true;
+            if(document.getElementById('auto-cb').checked) {
+                let delay = (appState.forcedNextForm === 7) ? 1800 : 4500;
+                setTimeout(() => generateNewExercise(), delay);
+            }
+        } else {
+            setTimeout(() => {
+                currentStepIndex++;
+                let cleanNs = activeChallenge.steps[currentStepIndex].name;
+                let currentParadigm = appState.paradigm || 'maj';
+                let suffixMode = (currentParadigm === 'maj' || currentParadigm === 'color1' || currentParadigm === 'color2') ? 'Maj' : 'min';
+                document.getElementById('target-text').innerText = `${cleanNs} ${suffixMode}`; updateDebug();
+            }, 1200);
+        }
     } else {
         document.getElementById('target-text').style.color = "#f44"; document.getElementById('target-text').innerText = translations[appState.currentLang || 'en'].tryAgain;
-        setTimeout(() => { let cleanNs = activeChallenge.steps[currentStepIndex].name; let currentParadigm = appState.paradigm || 'maj'; document.getElementById('target-text').innerText = `${cleanNs} ${currentParadigm === 'min' ? 'min' : currentParadigm.toUpperCase()}`; document.getElementById('target-text').style.color = "#0fc"; }, 1000);
+        setTimeout(() => {
+            let cleanNs = activeChallenge.steps[currentStepIndex].name;
+            let currentParadigm = appState.paradigm || 'maj';
+            let suffixMode = (currentParadigm === 'maj' || currentParadigm === 'color1' || currentParadigm === 'color2') ? 'Maj' : 'min';
+            document.getElementById('target-text').innerText = `${cleanNs} ${suffixMode}`; document.getElementById('target-text').style.color = "#0fc";
+        }, 1000);
     }
 };
+// === CHUNK 4 END ===
 
+// === CHUNK 5 START ===
 function saveState() {
-    appState.history = Array.from(document.querySelectorAll('#type-row .type-toggle.active')).map(b => b.dataset.id); appState.play = document.getElementById('play-cb').checked; appState.auto = document.getElementById('auto-cb').checked; appState.paradigm = appState.paradigm || 'maj'; appState.activeVoicing = document.getElementById('voicing-dropdown-list').value; appState.currentLang = document.getElementById('lang-dropdown').value; localStorage.setItem('cadence_tool_persistence', JSON.stringify(appState));
+    appState.history = Array.from(document.querySelectorAll('#type-row .type-toggle.active')).map(b => b.dataset.id);
+    appState.play = document.getElementById('play-cb').checked; appState.auto = document.getElementById('auto-cb').checked;
+    appState.paradigm = appState.paradigm || 'maj';
+    appState.activeVoicing = document.getElementById('voicing-dropdown-list').value; appState.currentLang = document.getElementById('lang-dropdown').value;
+    localStorage.setItem('cadence_tool_persistence', JSON.stringify(appState));
 }
+
 function updateParadigmMenu(activeParadigm) {
     const row = document.getElementById('paradigm-row'); if (!row) return; row.innerHTML = '';
-    paradigmList.forEach(p => { let b = document.createElement('button'); b.className = 'type-toggle' + (activeParadigm === p.id ? ' active' : ''); b.innerText = p.label; b.dataset.id = p.id; b.onclick = function() { appState.paradigm = p.id; saveState(); updateParadigmMenu(p.id); generateNewExercise(); }; row.appendChild(b); });
+    paradigmList.forEach(p => {
+        let b = document.createElement('button'); b.className = 'type-toggle' + (activeParadigm === p.id ? ' active' : '');
+        let cleanMenuLabel = p.label === 'Maj' ? 'Maj' : p.label === 'Min' ? 'min' : p.label;
+        b.innerText = cleanMenuLabel; b.dataset.id = p.id;
+        b.onclick = function() { appState.paradigm = p.id; saveState(); updateParadigmMenu(p.id); generateNewExercise(); };
+        row.appendChild(b);
+    });
 }
+
 function updateCategoryMenu(activeTypes) {
     const row = document.getElementById('type-row'); if (!row) return; row.innerHTML = '';
-    ["ii-V", "V-I", "ii-V-I"].forEach(id => { let b = document.createElement('button'); b.className = 'type-toggle' + (activeTypes.includes(id) ? ' active' : ''); b.innerText = id.toUpperCase(); b.dataset.id = id; b.onclick = function() { if (b.classList.contains('active') && document.querySelectorAll('#type-row .type-toggle.active').length <= 1) return; b.classList.toggle('active'); saveState(); generateNewExercise(); }; row.appendChild(b); });
+    "ii-V,V-I,ii-V-I".split(",").forEach(id => {
+        let b = document.createElement('button'); b.className = 'type-toggle' + (activeTypes.includes(id) ? ' active' : '');
+        b.innerText = id; b.dataset.id = id;
+        b.onclick = function() { if (b.classList.contains('active') && document.querySelectorAll('#type-row .type-toggle.active').length <= 1) return; b.classList.toggle('active'); saveState(); generateNewExercise(); };
+        row.appendChild(b);
+    });
 }
+
 function updateDebug() {
-    const debugLogEl = document.getElementById('debug-log'); if (!debugLogEl) return; if (!isDebugMode || !activeChallenge || !activeChallenge.steps) { debugLogEl.style.display = 'none'; return; }
-    let s = activeChallenge.steps[currentStepIndex]; if (!s) { debugLogEl.style.display = 'none'; return; }
-    debugLogEl.style.display = 'block'; let chosen = []; document.querySelectorAll('.key.active').forEach(k => chosen.push(noteNamesList[parseInt(k.dataset.idx) % 12]));
-    let label = (s.fullChordName || "").replace(/♭/g, "b").replace(/♯/g, "#"); debugLogEl.innerHTML = `${s.grade || ""} : ${label}\nTarget Notes: ${(s.notes || []).join(' ')}\nChosen Notes: ${chosen.join(' ')}`;
+    if(!isDebugMode || !activeChallenge) { document.getElementById('debug-log').style.display = 'none'; return; }
+    document.getElementById('debug-log').style.display = 'block'; let chosen = new Array();
+    document.querySelectorAll('.key.active').forEach(k => chosen.push(noteNamesList[parseInt(k.dataset.idx)%12]));
+    let s = activeChallenge.steps[currentStepIndex]; if (!s) return;
+    let label = s.fullChordName.replace(/♭/g, "b").replace(/♯/g, "#");
+    document.getElementById('debug-log').innerHTML = `${s.grade} : ${label}\nTarget Notes: ${s.notes.join(' ')}\nChosen Notes: ${chosen.join(' ')}`;
 }
-document.getElementById('target-text').ondblclick = function() { isDebugMode = !isDebugMode; updateDebug(); }; document.getElementById('btn-reset').onclick = function() { localStorage.clear(); location.reload(); };
-document.getElementById('play-cb').onchange = saveState; document.getElementById('auto-cb').onchange = saveState; document.getElementById('voicing-dropdown-list').onchange = function() { saveState(); generateNewExercise(); }; document.getElementById('lang-dropdown').onchange = function() { saveState(); generateNewExercise(); };
+
+document.getElementById('target-text').ondblclick = function() { isDebugMode = !isDebugMode; updateDebug(); };
+document.getElementById('btn-reset').onclick = function() { localStorage.clear(); location.reload(); };
+document.getElementById('play-cb').onchange = saveState; document.getElementById('auto-cb').onchange = saveState;
+document.getElementById('voicing-dropdown-list').onchange = function() { saveState(); generateNewExercise(); };
+document.getElementById('lang-dropdown').onchange = function() { saveState(); generateNewExercise(); };
 
 buildPianoUI();
-try { const saved = JSON.parse(localStorage.getItem('cadence_tool_persistence')); if (saved) { appState = saved; if (appState.play !== undefined) document.getElementById('play-cb').checked = appState.play; if (appState.auto !== undefined) document.getElementById('auto-cb').checked = appState.auto; if (appState.activeVoicing !== undefined) document.getElementById('voicing-dropdown-list').value = appState.activeVoicing; if (appState.currentLang !== undefined) document.getElementById('lang-dropdown').value = appState.currentLang; } } catch (e) { console.error(e); }
-if (!appState.history || !Array.isArray(appState.history) || appState.history.length === 0) appState.history = ["ii-V-I"];
-updateParadigmMenu(appState.paradigm || 'maj'); updateCategoryMenu(appState.history); generateNewExercise();
+const saved = JSON.parse(localStorage.getItem('cadence_tool_persistence'));
+if(saved) {
+    appState = saved;
+    if(appState.play !== undefined) document.getElementById('play-cb').checked = appState.play;
+    document.getElementById('auto-cb').checked = appState.auto;
+    document.getElementById('voicing-dropdown-list').value = appState.activeVoicing; document.getElementById('lang-dropdown').value = appState.currentLang;
+}
+updateParadigmMenu(appState.paradigm || 'maj'); updateCategoryMenu(appState.history || "ii-V-I".split(",")); generateNewExercise();
 </script>
 </body>
 </html>
+
 
